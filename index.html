@@ -23,8 +23,8 @@
     }
     
     header { text-align: center; padding-top: 20px; }
-    h1 { font-size: 1.2rem; margin: 0; color: #e2ab54; }
-    #status { font-size: 0.8rem; color: #888; margin-top: 4px; }
+    h1 { font-size: 1.3rem; margin: 0; color: #e2ab54; }
+    #status { font-size: 0.85rem; color: #888; margin-top: 4px; }
     
     #orbitCanvas {
       width: 95vw;
@@ -35,16 +35,16 @@
       margin: auto;
     }
     
-    footer { padding-bottom: 25px; text-align: center; font-size: 0.85rem; line-height: 1.5; color: #ccc; }
+    footer { padding-bottom: 25px; text-align: center; font-size: 0.9rem; line-height: 1.5; color: #ccc; }
     .data-line { margin: 2px 0; }
-    button { background: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; border-radius: 6px; margin-top: 8px; font-size: 0.8rem; }
+    button { background: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; border-radius: 6px; margin-top: 8px; font-size: 0.85rem; }
   </style>
 </head>
 <body>
 
   <header>
     <h1>Saturn-Titan Ephemeris</h1>
-    <div id="status">Analytical Orbital Computation (v11.0)</div>
+    <div id="status">Analytical Orbital Computation (v12.0)</div>
   </header>
 
   <canvas id="orbitCanvas" width="800" height="800"></canvas>
@@ -110,7 +110,7 @@
       let titanOrbitalAngle = Math.atan2(titan.y, titan.x) * (180 / Math.PI);
       if (titanOrbitalAngle < 0) titanOrbitalAngle += 360;
 
-      document.getElementById('status').innerText = `Live Calculations (v11.0) @ ${now.toLocaleTimeString()}`;
+      document.getElementById('status').innerText = `Live Calculations (v12.0) @ ${now.toLocaleTimeString()}`;
       drawClock(titan, lsDeg);
 
       document.getElementById('distance').innerText = `Saturn–Titan Distance: ${Math.round(titan.r).toLocaleString()} km`;
@@ -142,7 +142,7 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Label along the vector ("← toward Sun")
+      // Label along the vector line ("toward Sun")
       const labelDist = 260;
       const labelX = centerX + Math.cos(lsRad) * labelDist;
       const labelY = centerY - Math.sin(lsRad) * labelDist;
@@ -151,19 +151,19 @@
       ctx.translate(labelX, labelY);
       
       let textAngle = -lsRad;
-      let textStr = '← toward Sun';
+      let textStr = 'toward Sun →';
 
-      // Keep text right-side up; switch arrow direction if text orientation flips
+      // Keep text right-side up while ensuring arrow strictly points outward (away from Saturn)
       if (textAngle < -Math.PI / 2 || textAngle > Math.PI / 2) {
         textAngle += Math.PI;
-        textStr = 'toward Sun →';
+        textStr = '← toward Sun';
       }
       
       ctx.rotate(textAngle);
       ctx.fillStyle = '#ffffff';
-      ctx.font = '600 24px -apple-system, sans-serif';
+      ctx.font = '600 30px -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(textStr, 0, -12);
+      ctx.fillText(textStr, 0, -14);
       ctx.restore();
 
       // Orbit Path
@@ -181,9 +181,9 @@
 
       // Label: Saturn
       ctx.fillStyle = '#e2ab54';
-      ctx.font = '600 26px -apple-system, sans-serif';
+      ctx.font = '600 30px -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Saturn', centerX, centerY + 46);
+      ctx.fillText('Saturn', centerX, centerY + 52);
 
       // Titan Position (Cyan)
       const titanX = centerX + (titan.x * scale);
@@ -196,9 +196,9 @@
 
       // Label: Titan
       ctx.fillStyle = '#00d2ff';
-      ctx.font = '600 24px -apple-system, sans-serif';
+      ctx.font = '600 30px -apple-system, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('Titan', titanX + 22, titanY + 7);
+      ctx.fillText('Titan', titanX + 22, titanY + 9);
     }
 
     updateEphemeris();
