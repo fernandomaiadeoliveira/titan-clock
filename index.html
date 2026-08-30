@@ -38,20 +38,18 @@
 
     // Titan orbital parameters
     const TITAN_A = 1221870; // Semi-major axis (km)
-    const TITAN_ECC = 0.0288; // Eccentricity
+    const TITAN_ECC = 0.0288;
     const TITAN_PERIOD = 15.94542; // Days
     const T0 = new Date('2026-01-01T00:00:00Z').getTime();
 
     // Saturn solar orbit parameters
     const SATURN_SUN_PERIOD = 10759.22; // Days (~29.45 Earth years)
-    // Reference Saturn Ls at J2000 epoch (~267.3°) adjusted to T0 reference
-    const LS_EPOCH = 267.3; 
+    const LS_EPOCH_2026 = 270.8; // Calibrated Ls reference for Jan 1, 2026
 
     function getTitanPosition(nowMs) {
       const daysSinceEpoch = (nowMs - T0) / (1000 * 60 * 60 * 24);
       const meanAnomaly = (2 * Math.PI * (daysSinceEpoch % TITAN_PERIOD)) / TITAN_PERIOD;
       
-      // Kepler's Equation solver
       let E = meanAnomaly;
       for (let i = 0; i < 5; i++) {
         E = E - (E - TITAN_ECC * Math.sin(E) - meanAnomaly) / (1 - TITAN_ECC * Math.cos(E));
@@ -67,56 +65,49 @@
       return {
         x: r * Math.cos(v),
         y: r * Math.sin(v),
-        r: r,
-        trueAnomaly: v
+        r: r
       };
     }
 
     function getSaturnLs(nowMs) {
       const daysSinceEpoch = (nowMs - T0) / (1000 * 60 * 60 * 24);
       const meanMotionDeg = (360 * daysSinceEpoch) / SATURN_SUN_PERIOD;
-      let ls = (LS_EPOCH + meanMotionDeg) % 360;
+      let ls = (LS_EPOCH_2026 + meanMotionDeg) % 360;
       if (ls < 0) ls += 360;
       return ls;
-    }
-
-    function getSunDirectionAngle(nowMs) {
-      const daysSinceEpoch = (nowMs - T0) / (1000 * 60 * 60 * 24);
-      const sunAngle = (2 * Math.PI * (daysSinceEpoch % SATURN_SUN_PERIOD)) / SATURN_SUN_PERIOD;
-      return sunAngle + Math.PI;
     }
 
     function updateEphemeris() {
       const now = new Date();
       const titan = getTitanPosition(now.getTime());
       const ls = getSaturnLs(now.getTime());
-      const sunAngle = getSunDirectionAngle(now.getTime());
 
-      // Titan orbital angle (0° to 360°)
       let titanOrbitalAngle = Math.atan2(titan.y, titan.x) * (180 / Math.PI);
       if (titanOrbitalAngle < 0) titanOrbitalAngle += 360;
 
       document.getElementById('status').innerText = `Live Calculations @ ${now.toLocaleTimeString()}`;
-      drawClock(titan, sunAngle);
+      drawClock(titan, ls);
 
-      // Display metrics
       document.getElementById('distance').innerText = `Saturn–Titan Distance: ${Math.round(titan.r).toLocaleString()} km`;
       document.getElementById('titan-angle').innerText = `Titan Orbital Angle: ${titanOrbitalAngle.toFixed(2)}°`;
       document.getElementById('ls-angle').innerText = `Saturn Solar Longitude (Lₛ): ${ls.toFixed(2)}°`;
     }
 
-    function drawClock(titan, sunAngle) {
+    function drawClock(titan, lsDeg) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const scale = 300 / 1500000;
 
-      // Sun Direction Ray
-      ctx.strokeStyle = 'rgba(255, 223, 0, 0.5)';
+      // Convert Ls to radians, inverted for Canvas Y-axis (counterclockwise visual rotation)
+      const lsRad = -lsDeg * (Math.PI / 180);
+
+      // Sun Direction Ray mapped directly from Ls
+      ctx.strokeStyle = 'rgba(255, 223, 0, 0.6)';
       ctx.lineWidth = 2;
       ctx.setLineDash([8, 8]);
       ctx.beginPath();
       ctx.moveTo(center.x, center.y);
-      ctx.lineTo(center.x + Math.cos(sunAngle) * 380, center.y + Math.sin(sunAngle) * 380);
+      ctx.lineTo(center.x + Math.cos(lsRad) * 380, center.y + Math.sin(lsRad) * 380);
       ctx.stroke();
       ctx.setLineDash([]);
 
@@ -133,9 +124,9 @@
       ctx.arc(center.x, center.y, 20, 0, Math.PI * 2);
       ctx.fill();
 
-      // Titan Body
+      // Titan Body (Inverted Y for counterclockwise coordinate system)
       const titanX = center.x + (titan.x * scale);
-      const titanY = center.y + (titan.y * scale);
+      const titanY = center.y - (titan.y * scale);
 
       ctx.fillStyle = '#00d2ff';
       ctx.beginPath();
