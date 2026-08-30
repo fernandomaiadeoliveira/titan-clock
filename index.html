@@ -27,10 +27,10 @@
     #status { font-size: 0.8rem; color: #888; margin-top: 4px; }
     
     #orbitCanvas {
-      width: 85vw;
-      height: 85vw;
-      max-width: 400px;
-      max-height: 400px;
+      width: 95vw;
+      height: 95vw;
+      max-width: 520px;
+      max-height: 520px;
       display: block;
       margin: auto;
     }
@@ -44,7 +44,7 @@
 
   <header>
     <h1>Saturn-Titan Ephemeris</h1>
-    <div id="status">Analytical Orbital Computation (v6.0)</div>
+    <div id="status">Analytical Orbital Computation (v7.0)</div>
   </header>
 
   <canvas id="orbitCanvas" width="800" height="800"></canvas>
@@ -110,7 +110,7 @@
       let titanOrbitalAngle = Math.atan2(titan.y, titan.x) * (180 / Math.PI);
       if (titanOrbitalAngle < 0) titanOrbitalAngle += 360;
 
-      document.getElementById('status').innerText = `Live Calculations (v6.0) @ ${now.toLocaleTimeString()}`;
+      document.getElementById('status').innerText = `Live Calculations (v7.0) @ ${now.toLocaleTimeString()}`;
       drawClock(titan, lsDeg);
 
       document.getElementById('distance').innerText = `Saturn–Titan Distance: ${Math.round(titan.r).toLocaleString()} km`;
@@ -124,13 +124,14 @@
       const centerX = 400;
       const centerY = 400;
 
-      const scale = 300 / 1500000;
+      // Increased orbital scale to fill frame space
+      const scale = 360 / 1500000;
 
       const lsRad = (lsDeg + 180) * (Math.PI / 180);
 
       // Sun Vector (y inverted for Canvas coordinates)
-      const sunX = centerX + Math.cos(lsRad) * 360;
-      const sunY = centerY - Math.sin(lsRad) * 360;
+      const sunX = centerX + Math.cos(lsRad) * 365;
+      const sunY = centerY - Math.sin(lsRad) * 365;
 
       // Dashed direction vector
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
@@ -145,14 +146,14 @@
       // Sun Marker (White)
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(sunX, sunY, 10, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, 11, 0, Math.PI * 2);
       ctx.fill();
 
       // Label: Sun
       ctx.fillStyle = '#ffffff';
-      ctx.font = '600 22px -apple-system, sans-serif';
+      ctx.font = '600 24px -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Sun', sunX, sunY - 18);
+      ctx.fillText('Sun', sunX, sunY - 20);
 
       // Orbit Path
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
@@ -164,14 +165,14 @@
       // Saturn Center (Gold)
       ctx.fillStyle = '#e2ab54';
       ctx.beginPath();
-      ctx.arc(centerX, centerY, 24, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, 26, 0, Math.PI * 2);
       ctx.fill();
 
       // Label: Saturn
       ctx.fillStyle = '#e2ab54';
       ctx.font = '600 24px -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Saturn', centerX, centerY + 50);
+      ctx.fillText('Saturn', centerX, centerY + 54);
 
       // Titan Position (Cyan)
       const titanX = centerX + (titan.x * scale);
@@ -179,14 +180,14 @@
 
       ctx.fillStyle = '#00d2ff';
       ctx.beginPath();
-      ctx.arc(titanX, titanY, 12, 0, Math.PI * 2);
+      ctx.arc(titanX, titanY, 14, 0, Math.PI * 2);
       ctx.fill();
 
       // Label: Titan
       ctx.fillStyle = '#00d2ff';
-      ctx.font = '600 22px -apple-system, sans-serif';
+      ctx.font = '600 24px -apple-system, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('Titan', titanX + 20, titanY + 6);
+      ctx.fillText('Titan', titanX + 22, titanY + 6);
     }
 
     updateEphemeris();
