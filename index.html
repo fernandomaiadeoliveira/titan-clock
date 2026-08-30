@@ -11,6 +11,7 @@
     #status { font-size: 0.8rem; color: #888; margin-top: 4px; }
     canvas { width: 90vw; height: 90vw; max-width: 400px; max-height: 400px; }
     footer { margin-bottom: 30px; text-align: center; font-size: 0.85rem; line-height: 1.4; color: #aaa; }
+    button { background: #333; color: #fff; border: 1px solid #555; padding: 6px 12px; border-radius: 6px; margin-top: 8px; font-size: 0.8rem; }
   </style>
 </head>
 <body>
@@ -25,70 +26,81 @@
   <footer>
     <div id="titan-coords">Titan Pos: Loading...</div>
     <div id="sun-dir">Sun Vector: Loading...</div>
+    <button onclick="fetchPositions()">Refresh Data</button>
   </footer>
 
   <script>
     const canvas = document.getElementById('orbitCanvas');
     const ctx = canvas.getContext('2d');
     const center = { x: 400, y: 400 };
-
-    // Scaled rendering factors (Titan orbit semimajor axis ~ 1.22 million km)
     const scale = 300 / 1500000; 
 
-    // Free CORS proxy to bypass JPL CORS header restrictions on iOS Safari
-    const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+    // Using corsproxy.io for better reliability on iOS
+    const PROXY = "https://corsproxy.io/?";
 
-    function getJPLUrl(target, centerCode) {
+    function buildJPLUrl(target, centerCode) {
       const now = new Date();
       const start = now.toISOString().split('T')[0];
       const stopDate = new Date(now.getTime() + 86400000);
       const stop = stopDate.toISOString().split('T')[0];
 
-      const jplApi = `https://ssd-api.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='${target}'&CENTER='${centerCode}'&EPHEM_TYPE='VECTORS'&START_TIME='${start}'&STOP_TIME='${stop}'&STEP_SIZE='1m'`;
-      return CORS_PROXY + encodeURIComponent(jplApi);
+      const jplApi = `https://ssd-api.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='${target}'&CENTER='${centerCode}'&EPHEM_TYPE='VECTORS'&START_TIME='${start}'&STOP_TIME='${stop}'&STEP_SIZE='1d'`;
+      return PROXY + encodeURIComponent(jplApi);
+    }
+
+    async function fetchVector(target, centerCode) {
+      const res = await fetch(buildJPLUrl(target, centerCode));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      
+      const text = data.result || "";
+      const soeIndex = text.indexOf("$$SOE");
+      const eoeIndex = text.indexOf("$$EOE");
+      
+      if (soeIndex === -1 || eoeIndex === -1) {
+        throw new Error("Invalid JPL data block");
+      }
+      
+      const dataBlock = text.substring(soeIndex, eoeIndex);
+      
+      // Parse X and Y coordinate values from JPL output format
+      const xMatch = dataBlock.match(/X\s*=\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/);
+      const yMatch = dataBlock.match(/Y\s*=\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/);
+      
+      if (!xMatch || !yMatch) throw new Error("Could not parse coordinates");
+      
+      return {
+        x: parseFloat(xMatch[1]),
+        y: parseFloat(yMatch[1])
+      };
     }
 
     async function fetchPositions() {
+      const statusEl = document.getElementById('status');
+      statusEl.innerText = "Connecting to JPL Horizons...";
+
       try {
-        // 1. Fetch Titan relative to Saturn (CENTER='500@699', TARGET='606')
-        const titanRes = await fetch(getJPLUrl('606', '500@699'));
-        const titanData = await titanRes.json();
+        // Fetch Titan (606) relative to Saturn (500@699)
+        const titan = await fetchVector('606', '500@699');
+        
+        // Fetch Sun (10) relative to Saturn (500@699)
+        const sun = await fetchVector('10', '500@699');
 
-        // 2. Fetch Sun relative to Saturn (CENTER='500@699', TARGET='10')
-        const sunRes = await fetch(getJPLUrl('10', '500@699'));
-        const sunData = await sunRes.json();
-
-        // Extract latest coordinates (x, y in km)
-        const titanVec = extractLatestVector(titanData.result);
-        const sunVec = extractLatestVector(sunData.result);
-
-        document.getElementById('status').innerText = `Live JPL Data @ ${new Date().toLocaleTimeString()}`;
-        drawClock(titanVec, sunVec);
+        statusEl.innerText = `Updated: ${new Date().toLocaleTimeString()}`;
+        drawClock(titan, sun);
       } catch (err) {
-        document.getElementById('status').innerText = "API Error. Retrying...";
         console.error(err);
+        statusEl.innerText = `Error: ${err.message}. Tap Refresh to retry.`;
       }
-    }
-
-    function extractLatestVector(resultText) {
-      // Regex parsing for JPL Horizons Vector output text block
-      const lines = resultText.split('\n');
-      for (let i = lines.length - 1; i >= 0; i--) {
-        if (lines[i].includes('X =')) {
-          const x = parseFloat(lines[i].match(/X =\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/)[1]);
-          const y = parseFloat(lines[i+1].match(/Y =\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/)[1]);
-          return { x, y };
-        }
-      }
-      return { x: 0, y: 0 };
     }
 
     function drawClock(titan, sun) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw Sun Direction Ray
+      // Sun Direction Ray
       const sunAngle = Math.atan2(sun.y, sun.x);
-      ctx.strokeStyle = 'rgba(255, 223, 0, 0.4)';
+      ctx.strokeStyle = 'rgba(255, 223, 0, 0.5)';
+      ctx.lineWidth = 2;
       ctx.setLineDash([8, 8]);
       ctx.beginPath();
       ctx.moveTo(center.x, center.y);
@@ -96,34 +108,34 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Draw Orbit Path
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      // Titan Orbit Line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(center.x, center.y, 1220000 * scale, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Draw Saturn
+      // Saturn Center
       ctx.fillStyle = '#e2ab54';
       ctx.beginPath();
-      ctx.arc(center.x, center.y, 18, 0, Math.PI * 2);
+      ctx.arc(center.x, center.y, 20, 0, Math.PI * 2);
       ctx.fill();
 
-      // Draw Titan
+      // Titan Position
       const titanX = center.x + (titan.x * scale);
       const titanY = center.y + (titan.y * scale);
 
       ctx.fillStyle = '#00d2ff';
       ctx.beginPath();
-      ctx.arc(titanX, titanY, 8, 0, Math.PI * 2);
+      ctx.arc(titanX, titanY, 10, 0, Math.PI * 2);
       ctx.fill();
 
-      // Labels
-      document.getElementById('titan-coords').innerText = `Titan X: ${Math.round(titan.x).toLocaleString()} km | Y: ${Math.round(titan.y).toLocaleString()} km`;
-      document.getElementById('sun-dir').innerText = `Sun Angle: ${(sunAngle * (180 / Math.PI)).toFixed(1)}°`;
+      // Updates Footer Labels
+      document.getElementById('titan-coords').innerText = `Titan: X=${Math.round(titan.x).toLocaleString()} km | Y=${Math.round(titan.y).toLocaleString()} km`;
+      document.getElementById('sun-dir').innerText = `Sun Phase Angle: ${(sunAngle * (180 / Math.PI)).toFixed(1)}°`;
     }
 
     fetchPositions();
-    setInterval(fetchPositions, 60000); // Refresh every 60s
   </script>
 </body>
 </html>
