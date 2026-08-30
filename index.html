@@ -2,38 +2,73 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Titan Ephemeris Clock</title>
   <style>
-    body { margin: 0; background: #050508; color: #fff; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; justify-content: space-between; }
-    header { text-align: center; margin-top: 20px; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #050508;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      height: 100vh;
+      padding: 15px 0;
+    }
+    header { text-align: center; }
     h1 { font-size: 1.2rem; margin: 0; color: #e2ab54; }
     #status { font-size: 0.8rem; color: #888; margin-top: 4px; }
-    .canvas-container { width: 90vw; height: 90vw; max-width: 400px; max-height: 400px; display: flex; align-items: center; justify-content: center; }
-    canvas { width: 100%; height: 100%; aspect-ratio: 1 / 1; display: block; }
-    footer { margin-bottom: 25px; text-align: center; font-size: 0.85rem; line-height: 1.5; color: #ccc; }
+    
+    .canvas-wrapper {
+      width: 85vw;
+      height: 85vw;
+      max-width: 380px;
+      max-height: 380px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+    
+    footer { text-align: center; font-size: 0.85rem; line-height: 1.5; color: #ccc; }
     .data-line { margin: 2px 0; }
-    button { background: #333; color: #fff; border: 1px solid #555; padding: 6px 12px; border-radius: 6px; margin-top: 8px; font-size: 0.8rem; }
+    button { background: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; border-radius: 6px; margin-top: 8px; font-size: 0.8rem; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>Saturn-Titan Ephemeris</h1>
-    <div id="status">Analytical Orbital Computation (v2.2)</div>
-  </header>
+  <div class="app-container">
+    <header>
+      <h1>Saturn-Titan Ephemeris</h1>
+      <div id="status">Analytical Orbital Computation (v3.0)</div>
+    </header>
 
-  <div class="canvas-container">
-    <canvas id="orbitCanvas" width="800" height="800"></canvas>
+    <div class="canvas-wrapper">
+      <canvas id="orbitCanvas"></canvas>
+    </div>
+
+    <footer>
+      <div class="data-line" id="distance">Distance: Calculating...</div>
+      <div class="data-line" id="titan-angle">Titan Orbital Angle: Calculating...</div>
+      <div class="data-line" id="ls-angle">Saturn Solar Longitude (Lₛ): Calculating...</div>
+      <button onclick="updateEphemeris()">Refresh Clock</button>
+    </footer>
   </div>
-
-  <footer>
-    <div class="data-line" id="distance">Distance: Calculating...</div>
-    <div class="data-line" id="titan-angle">Titan Orbital Angle: Calculating...</div>
-    <div class="data-line" id="ls-angle">Saturn Solar Longitude (Lₛ): Calculating...</div>
-    <button onclick="updateEphemeris()">Refresh Clock</button>
-  </footer>
 
   <script>
     const canvas = document.getElementById('orbitCanvas');
@@ -46,6 +81,24 @@
 
     const SATURN_SUN_PERIOD = 10759.22; // Days (~29.45 Earth years)
     const LS_EPOCH_2026 = 270.8; // Calibrated Ls reference for Jan 1, 2026
+
+    let viewWidth = 0;
+    let viewHeight = 0;
+
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      
+      viewWidth = rect.width;
+      viewHeight = rect.height;
+
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+      updateEphemeris();
+    }
 
     function getTitanPosition(nowMs) {
       const daysSinceEpoch = (nowMs - T0) / (1000 * 60 * 60 * 24);
@@ -79,6 +132,8 @@
     }
 
     function updateEphemeris() {
+      if (!viewWidth || !viewHeight) return;
+
       const now = new Date();
       const titan = getTitanPosition(now.getTime());
       const lsDeg = getSaturnLs(now.getTime());
@@ -86,7 +141,7 @@
       let titanOrbitalAngle = Math.atan2(titan.y, titan.x) * (180 / Math.PI);
       if (titanOrbitalAngle < 0) titanOrbitalAngle += 360;
 
-      document.getElementById('status').innerText = `Live Calculations @ ${now.toLocaleTimeString()}`;
+      document.getElementById('status').innerText = `Live Calculations (v3.0) @ ${now.toLocaleTimeString()}`;
       drawClock(titan, lsDeg);
 
       document.getElementById('distance').innerText = `Saturn–Titan Distance: ${Math.round(titan.r).toLocaleString()} km`;
@@ -95,53 +150,59 @@
     }
 
     function drawClock(titan, lsDeg) {
-      // Dynamic center definition to prevent offset rendering
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
+      const cx = viewWidth / 2;
+      const cy = viewHeight / 2;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, viewWidth, viewHeight);
 
-      const scale = 300 / 1500000;
+      // Orbit boundary radius fits within viewport with margin
+      const orbitRadius = Math.min(viewWidth, viewHeight) * 0.38;
+      const scale = orbitRadius / TITAN_A;
+
       const lsRad = lsDeg * (Math.PI / 180);
 
-      // Sun Direction Ray (y inverted for Canvas coordinates)
-      const sunX = centerX + Math.cos(lsRad) * 380;
-      const sunY = centerY - Math.sin(lsRad) * 380;
+      // Sun Direction Ray (y inverted for screen coordinates)
+      const sunX = cx + Math.cos(lsRad) * (orbitRadius * 1.15);
+      const sunY = cy - Math.sin(lsRad) * (orbitRadius * 1.15);
 
       ctx.strokeStyle = 'rgba(255, 223, 0, 0.6)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([8, 8]);
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 6]);
       ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
+      ctx.moveTo(cx, cy);
       ctx.lineTo(sunX, sunY);
       ctx.stroke();
       ctx.setLineDash([]);
 
       // Orbit Path
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, TITAN_A * scale, 0, Math.PI * 2);
+      ctx.arc(cx, cy, orbitRadius, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Saturn Center (forced to exact canvas center)
+      // Saturn Center (Explicitly locked to container center)
       ctx.fillStyle = '#e2ab54';
       ctx.beginPath();
-      ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
       ctx.fill();
 
       // Titan Position
-      const titanX = centerX + (titan.x * scale);
-      const titanY = centerY - (titan.y * scale);
+      const titanX = cx + (titan.x * scale);
+      const titanY = cy - (titan.y * scale);
 
       ctx.fillStyle = '#00d2ff';
       ctx.beginPath();
-      ctx.arc(titanX, titanY, 10, 0, Math.PI * 2);
+      ctx.arc(titanX, titanY, 7, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    updateEphemeris();
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('load', resizeCanvas);
+    resizeCanvas();
+
     setInterval(updateEphemeris, 10000);
   </script>
 </body>
 </html>
+   
