@@ -98,16 +98,19 @@
 
       const scale = 300 / 1500000;
 
-      // Convert Ls to radians, inverted for Canvas Y-axis (counterclockwise visual rotation)
-      const lsRad = -lsDeg * (Math.PI / 180);
+      // Convert Ls to radians for standard trigonometry
+      const lsRad = lsDeg * (Math.PI / 180);
 
-      // Sun Direction Ray mapped directly from Ls
+      // Sun Direction Ray (Subtracting Y component to flip canvas inverted vertical axis)
+      const sunX = center.x + Math.cos(lsRad) * 380;
+      const sunY = center.y - Math.sin(lsRad) * 380;
+
       ctx.strokeStyle = 'rgba(255, 223, 0, 0.6)';
       ctx.lineWidth = 2;
       ctx.setLineDash([8, 8]);
       ctx.beginPath();
       ctx.moveTo(center.x, center.y);
-      ctx.lineTo(center.x + Math.cos(lsRad) * 380, center.y + Math.sin(lsRad) * 380);
+      ctx.lineTo(sunX, sunY);
       ctx.stroke();
       ctx.setLineDash([]);
 
@@ -124,7 +127,7 @@
       ctx.arc(center.x, center.y, 20, 0, Math.PI * 2);
       ctx.fill();
 
-      // Titan Body (Inverted Y for counterclockwise coordinate system)
+      // Titan Body (Subtracting Y component for true counterclockwise coordinates)
       const titanX = center.x + (titan.x * scale);
       const titanY = center.y - (titan.y * scale);
 
