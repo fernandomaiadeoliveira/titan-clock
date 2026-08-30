@@ -122,49 +122,55 @@
     }
 
     function drawClock(titan, lsDeg) {
-      // Clear total coordinate space
-      ctx.clearRect(0, 0, 800, 800);
+      const cx = viewWidth / 2;
+      const cy = viewHeight / 2;
 
-      // Explicit Hardcoded Center on internal 800x800 coordinate system
-      const centerX = 400;
-      const centerY = 400;
+      ctx.clearRect(0, 0, viewWidth, viewHeight);
 
-      const scale = 300 / 1500000;
+      const orbitRadius = Math.min(viewWidth, viewHeight) * 0.38;
+      const scale = orbitRadius / TITAN_A;
+
       const lsRad = lsDeg * (Math.PI / 180);
 
-      // Sun Direction Ray (y inverted for Canvas coordinates)
-      const sunX = centerX + Math.cos(lsRad) * 360;
-      const sunY = centerY - Math.sin(lsRad) * 360;
+      // Sun Direction Ray
+      const sunX = cx + Math.cos(lsRad) * (orbitRadius * 1.15);
+      const sunY = cy - Math.sin(lsRad) * (orbitRadius * 1.15);
 
       ctx.strokeStyle = 'rgba(255, 223, 0, 0.6)';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([12, 12]);
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 6]);
       ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
+      ctx.moveTo(cx, cy);
       ctx.lineTo(sunX, sunY);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Orbit Path
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-      ctx.lineWidth = 2;
+      // Draw Sun icon at the tip of the Ls vector
+      ctx.fillStyle = '#ffdf00';
       ctx.beginPath();
-      ctx.arc(centerX, centerY, TITAN_A * scale, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Saturn Center
-      ctx.fillStyle = '#e2ab54';
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 24, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, 6, 0, Math.PI * 2);
       ctx.fill();
 
-      // Titan Position
-      const titanX = centerX + (titan.x * scale);
-      const titanY = centerY - (titan.y * scale);
+      // Orbit Path
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, orbitRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Saturn Center (Gold/Orange)
+      ctx.fillStyle = '#e2ab54';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Titan Position (Cyan)
+      const titanX = cx + (titan.x * scale);
+      const titanY = cy - (titan.y * scale);
 
       ctx.fillStyle = '#00d2ff';
       ctx.beginPath();
-      ctx.arc(titanX, titanY, 12, 0, Math.PI * 2);
+      ctx.arc(titanX, titanY, 7, 0, Math.PI * 2);
       ctx.fill();
     }
 
