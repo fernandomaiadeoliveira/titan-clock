@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Titan Ephemeris Clock</title>
   <style>
     body { margin: 0; background: #050508; color: #fff; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; justify-content: space-between; }
@@ -19,7 +20,7 @@
 
   <header>
     <h1>Saturn-Titan Ephemeris</h1>
-    <div id="status">Analytical Orbital Computation</div>
+    <div id="status">Analytical Orbital Computation (v2.1)</div>
   </header>
 
   <canvas id="orbitCanvas" width="800" height="800"></canvas>
@@ -42,7 +43,7 @@
     const T0 = new Date('2026-01-01T00:00:00Z').getTime();
 
     const SATURN_SUN_PERIOD = 10759.22; // Days (~29.45 Earth years)
-    const LS_EPOCH_2026 = 270.8; // Ls reference for Jan 1, 2026
+    const LS_EPOCH_2026 = 270.8; // Calibrated Ls reference for Jan 1, 2026
 
     function getTitanPosition(nowMs) {
       const daysSinceEpoch = (nowMs - T0) / (1000 * 60 * 60 * 24);
