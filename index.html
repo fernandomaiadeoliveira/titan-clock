@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <title>Titan Ephemeris Clock</title>
+  <title>Sun-Saturn-Titan Ephemerides Clock</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -23,7 +23,7 @@
     }
     
     header { text-align: center; padding-top: 20px; }
-    h1 { font-size: 1.3rem; margin: 0; color: #e2ab54; }
+    h1 { font-size: 1.25rem; margin: 0; color: #e2ab54; }
     #status { font-size: 0.85rem; color: #888; margin-top: 4px; }
     
     #orbitCanvas {
@@ -43,8 +43,8 @@
 <body>
 
   <header>
-    <h1>Saturn-Titan Ephemeris</h1>
-    <div id="status">Analytical Orbital Computation (v12.0)</div>
+    <h1>Sun-Saturn-Titan Ephemerides</h1>
+    <div id="status">Analytical Orbital Computation (v13.0)</div>
   </header>
 
   <canvas id="orbitCanvas" width="800" height="800"></canvas>
@@ -110,7 +110,7 @@
       let titanOrbitalAngle = Math.atan2(titan.y, titan.x) * (180 / Math.PI);
       if (titanOrbitalAngle < 0) titanOrbitalAngle += 360;
 
-      document.getElementById('status').innerText = `Live Calculations (v12.0) @ ${now.toLocaleTimeString()}`;
+      document.getElementById('status').innerText = `Live Calculations (v13.0) @ ${now.toLocaleTimeString()}`;
       drawClock(titan, lsDeg);
 
       document.getElementById('distance').innerText = `Saturn–Titan Distance: ${Math.round(titan.r).toLocaleString()} km`;
@@ -142,7 +142,7 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Label along the vector line ("toward Sun")
+      // Label along vector line ("toward Sun")
       const labelDist = 260;
       const labelX = centerX + Math.cos(lsRad) * labelDist;
       const labelY = centerY - Math.sin(lsRad) * labelDist;
@@ -153,7 +153,6 @@
       let textAngle = -lsRad;
       let textStr = 'toward Sun →';
 
-      // Keep text right-side up while ensuring arrow strictly points outward (away from Saturn)
       if (textAngle < -Math.PI / 2 || textAngle > Math.PI / 2) {
         textAngle += Math.PI;
         textStr = '← toward Sun';
