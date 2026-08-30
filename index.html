@@ -44,7 +44,7 @@
 
   <header>
     <h1>Saturn-Titan Ephemeris</h1>
-    <div id="status">Analytical Orbital Computation (v9.0)</div>
+    <div id="status">Analytical Orbital Computation (v10.0)</div>
   </header>
 
   <canvas id="orbitCanvas" width="800" height="800"></canvas>
@@ -110,7 +110,7 @@
       let titanOrbitalAngle = Math.atan2(titan.y, titan.x) * (180 / Math.PI);
       if (titanOrbitalAngle < 0) titanOrbitalAngle += 360;
 
-      document.getElementById('status').innerText = `Live Calculations (v9.0) @ ${now.toLocaleTimeString()}`;
+      document.getElementById('status').innerText = `Live Calculations (v10.0) @ ${now.toLocaleTimeString()}`;
       drawClock(titan, lsDeg);
 
       document.getElementById('distance').innerText = `Saturn–Titan Distance: ${Math.round(titan.r).toLocaleString()} km`;
@@ -127,9 +127,10 @@
       const scale = 360 / 1500000;
       const lsRad = (lsDeg + 180) * (Math.PI / 180);
 
-      // Sun Vector (shortened to 340px to keep text comfortably inside boundaries)
-      const sunX = centerX + Math.cos(lsRad) * 340;
-      const sunY = centerY - Math.sin(lsRad) * 340;
+      // Sun Vector end point
+      const lineLen = 350;
+      const sunX = centerX + Math.cos(lsRad) * lineLen;
+      const sunY = centerY - Math.sin(lsRad) * lineLen;
 
       // Dashed direction vector
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
@@ -141,18 +142,28 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Sun Marker (White)
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(sunX, sunY, 24, 0, Math.PI * 2);
-      ctx.fill();
+      // Label along the line ("toward Sun →")
+      const labelDist = 260; // Position text along vector
+      const labelX = centerX + Math.cos(lsRad) * labelDist;
+      const labelY = centerY - Math.sin(lsRad) * labelDist;
 
-      // Smart Label: Sun (moves below the marker if Sun is in the top half of the canvas)
+      ctx.save();
+      ctx.translate(labelX, labelY);
+      
+      // Calculate rotation angle in canvas space (inverted Y)
+      let textAngle = -lsRad;
+      
+      // Keep text right-side up so it is easy to read
+      if (textAngle < -Math.PI / 2 || textAngle > Math.PI / 2) {
+        textAngle += Math.PI;
+      }
+      
+      ctx.rotate(textAngle);
       ctx.fillStyle = '#ffffff';
-      ctx.font = '600 24px -apple-system, sans-serif';
+      ctx.font = '600 20px -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      const sunLabelY = sunY < centerY ? sunY + 54 : sunY - 32;
-      ctx.fillText('Sun', sunX, sunLabelY);
+      ctx.fillText('toward Sun →', 0, -10);
+      ctx.restore();
 
       // Orbit Path
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
@@ -184,7 +195,7 @@
 
       // Label: Titan
       ctx.fillStyle = '#00d2ff';
-      ctx.font = '600 24px -apple-system, sans-serif';
+      ctx.font = '600 22px -apple-system, sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText('Titan', titanX + 20, titanY + 6);
     }
