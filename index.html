@@ -18,7 +18,7 @@
 
   <header>
     <h1>Saturn-Titan Ephemeris</h1>
-    <div id="status">Fetching JPL Horizons data...</div>
+    <div id="status">Connecting directly to JPL...</div>
   </header>
 
   <canvas id="orbitCanvas" width="800" height="800"></canvas>
@@ -26,7 +26,7 @@
   <footer>
     <div id="titan-coords">Titan Pos: Loading...</div>
     <div id="sun-dir">Sun Vector: Loading...</div>
-    <button onclick="fetchPositions()">Refresh Data</button>
+    <button onclick="loadPositions()">Refresh Data</button>
   </footer>
 
   <script>
@@ -35,39 +35,49 @@
     const center = { x: 400, y: 400 };
     const scale = 300 / 1500000; 
 
-    // Using corsproxy.io for better reliability on iOS
-    const PROXY = "https://corsproxy.io/?";
+    let state = { titan: null, sun: null };
 
-    function buildJPLUrl(target, centerCode) {
-      const now = new Date();
-      const start = now.toISOString().split('T')[0];
-      const stopDate = new Date(now.getTime() + 86400000);
-      const stop = stopDate.toISOString().split('T')[0];
+    // Fetch using script injection (JSONP) to bypass CORS completely
+    function fetchJPLJSONP(target, centerCode, callbackName) {
+      return new Promise((resolve, reject) => {
+        const now = new Date();
+        const start = now.toISOString().split('T')[0];
+        const stopDate = new Date(now.getTime() + 86400000);
+        const stop = stopDate.toISOString().split('T')[0];
 
-      const jplApi = `https://ssd-api.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='${target}'&CENTER='${centerCode}'&EPHEM_TYPE='VECTORS'&START_TIME='${start}'&STOP_TIME='${stop}'&STEP_SIZE='1d'`;
-      return PROXY + encodeURIComponent(jplApi);
+        window[callbackName] = function(data) {
+          try {
+            const vec = parseJPLVector(data.result);
+            delete window[callbackName];
+            script.remove();
+            resolve(vec);
+          } catch (e) {
+            reject(e);
+          }
+        };
+
+        const script = document.createElement('script');
+        script.src = `https://ssd-api.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='${target}'&CENTER='${centerCode}'&EPHEM_TYPE='VECTORS'&START_TIME='${start}'&STOP_TIME='${stop}'&STEP_SIZE='1d'&obj_data='NO'&callback=${callbackName}`;
+        script.onerror = () => reject(new Error("Failed to reach JPL API"));
+        document.body.appendChild(script);
+      });
     }
 
-    async function fetchVector(target, centerCode) {
-      const res = await fetch(buildJPLUrl(target, centerCode));
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      
-      const text = data.result || "";
+    function parseJPLVector(text) {
+      if (!text) throw new Error("Empty response");
       const soeIndex = text.indexOf("$$SOE");
       const eoeIndex = text.indexOf("$$EOE");
       
       if (soeIndex === -1 || eoeIndex === -1) {
-        throw new Error("Invalid JPL data block");
+        throw new Error("Invalid orbital block");
       }
       
       const dataBlock = text.substring(soeIndex, eoeIndex);
       
-      // Parse X and Y coordinate values from JPL output format
       const xMatch = dataBlock.match(/X\s*=\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/);
       const yMatch = dataBlock.match(/Y\s*=\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/);
       
-      if (!xMatch || !yMatch) throw new Error("Could not parse coordinates");
+      if (!xMatch || !yMatch) throw new Error("Parsing failure");
       
       return {
         x: parseFloat(xMatch[1]),
@@ -75,22 +85,19 @@
       };
     }
 
-    async function fetchPositions() {
+    async function loadPositions() {
       const statusEl = document.getElementById('status');
-      statusEl.innerText = "Connecting to JPL Horizons...";
+      statusEl.innerText = "Requesting JPL Horizons vectors...";
 
       try {
-        // Fetch Titan (606) relative to Saturn (500@699)
-        const titan = await fetchVector('606', '500@699');
-        
-        // Fetch Sun (10) relative to Saturn (500@699)
-        const sun = await fetchVector('10', '500@699');
+        const titan = await fetchJPLJSONP('606', '500@699', 'jplCallbackTitan');
+        const sun = await fetchJPLJSONP('10', '500@699', 'jplCallbackSun');
 
-        statusEl.innerText = `Updated: ${new Date().toLocaleTimeString()}`;
+        statusEl.innerText = `Live JPL Data @ ${new Date().toLocaleTimeString()}`;
         drawClock(titan, sun);
       } catch (err) {
         console.error(err);
-        statusEl.innerText = `Error: ${err.message}. Tap Refresh to retry.`;
+        statusEl.innerText = `Error: ${err.message}. Tap to retry.`;
       }
     }
 
@@ -108,7 +115,7 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Titan Orbit Line
+      // Titan Orbit Path
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -130,12 +137,12 @@
       ctx.arc(titanX, titanY, 10, 0, Math.PI * 2);
       ctx.fill();
 
-      // Updates Footer Labels
+      // Footer Data
       document.getElementById('titan-coords').innerText = `Titan: X=${Math.round(titan.x).toLocaleString()} km | Y=${Math.round(titan.y).toLocaleString()} km`;
-      document.getElementById('sun-dir').innerText = `Sun Phase Angle: ${(sunAngle * (180 / Math.PI)).toFixed(1)}°`;
+      document.getElementById('sun-dir').innerText = `Sun Vector Angle: ${(sunAngle * (180 / Math.PI)).toFixed(1)}°`;
     }
 
-    fetchPositions();
+    loadPositions();
   </script>
 </body>
 </html>
