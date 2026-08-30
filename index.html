@@ -26,7 +26,6 @@
     h1 { font-size: 1.2rem; margin: 0; color: #e2ab54; }
     #status { font-size: 0.8rem; color: #888; margin-top: 4px; }
     
-    /* Strict CSS sizing rule for Canvas display */
     #orbitCanvas {
       width: 85vw;
       height: 85vw;
@@ -45,10 +44,9 @@
 
   <header>
     <h1>Saturn-Titan Ephemeris</h1>
-    <div id="status">Analytical Orbital Computation (v4.0)</div>
+    <div id="status">Analytical Orbital Computation (v5.0)</div>
   </header>
 
-  <!-- Hardcoded integer dimensions ONLY. Do NOT add CSS units inside canvas tag attributes! -->
   <canvas id="orbitCanvas" width="800" height="800"></canvas>
 
   <footer>
@@ -62,7 +60,6 @@
     const canvas = document.getElementById('orbitCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Force internal drawing buffer strictly to 800x800 regardless of device
     canvas.width = 800;
     canvas.height = 800;
 
@@ -72,7 +69,7 @@
     const T0 = new Date('2026-01-01T00:00:00Z').getTime();
 
     const SATURN_SUN_PERIOD = 10759.22; // Days (~29.45 Earth years)
-    const LS_EPOCH_2026 = 270.8; // Ls reference for Jan 1, 2026
+    const LS_EPOCH_2026 = 270.8; // Calibrated Ls reference for Jan 1, 2026
 
     function getTitanPosition(nowMs) {
       const daysSinceEpoch = (nowMs - T0) / (1000 * 60 * 60 * 24);
@@ -113,7 +110,7 @@
       let titanOrbitalAngle = Math.atan2(titan.y, titan.x) * (180 / Math.PI);
       if (titanOrbitalAngle < 0) titanOrbitalAngle += 360;
 
-      document.getElementById('status').innerText = `Live Calculations (v4.0) @ ${now.toLocaleTimeString()}`;
+      document.getElementById('status').innerText = `Live Calculations (v5.0) @ ${now.toLocaleTimeString()}`;
       drawClock(titan, lsDeg);
 
       document.getElementById('distance').innerText = `Saturn–Titan Distance: ${Math.round(titan.r).toLocaleString()} km`;
@@ -122,55 +119,56 @@
     }
 
     function drawClock(titan, lsDeg) {
-      const cx = viewWidth / 2;
-      const cy = viewHeight / 2;
+      ctx.clearRect(0, 0, 800, 800);
 
-      ctx.clearRect(0, 0, viewWidth, viewHeight);
+      const centerX = 400;
+      const centerY = 400;
 
-      const orbitRadius = Math.min(viewWidth, viewHeight) * 0.38;
-      const scale = orbitRadius / TITAN_A;
+      const scale = 300 / 1500000;
 
-      const lsRad = lsDeg * (Math.PI / 180);
+      // Add 180 degrees to orient vector toward Saturn's orbital position relative to the Sun
+      const lsRad = (lsDeg + 180) * (Math.PI / 180);
 
-      // Sun Direction Ray
-      const sunX = cx + Math.cos(lsRad) * (orbitRadius * 1.15);
-      const sunY = cy - Math.sin(lsRad) * (orbitRadius * 1.15);
+      // Sun Vector (y inverted for Canvas coordinates)
+      const sunX = centerX + Math.cos(lsRad) * 360;
+      const sunY = centerY - Math.sin(lsRad) * 360;
 
+      // Dashed direction vector
       ctx.strokeStyle = 'rgba(255, 223, 0, 0.6)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([6, 6]);
+      ctx.lineWidth = 3;
+      ctx.setLineDash([12, 12]);
       ctx.beginPath();
-      ctx.moveTo(cx, cy);
+      ctx.moveTo(centerX, centerY);
       ctx.lineTo(sunX, sunY);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Draw Sun icon at the tip of the Ls vector
+      // Sun Marker
       ctx.fillStyle = '#ffdf00';
       ctx.beginPath();
-      ctx.arc(sunX, sunY, 6, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, 10, 0, Math.PI * 2);
       ctx.fill();
 
       // Orbit Path
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(cx, cy, orbitRadius, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, TITAN_A * scale, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Saturn Center (Gold/Orange)
+      // Saturn Center (Gold)
       ctx.fillStyle = '#e2ab54';
       ctx.beginPath();
-      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, 24, 0, Math.PI * 2);
       ctx.fill();
 
       // Titan Position (Cyan)
-      const titanX = cx + (titan.x * scale);
-      const titanY = cy - (titan.y * scale);
+      const titanX = centerX + (titan.x * scale);
+      const titanY = centerY - (titan.y * scale);
 
       ctx.fillStyle = '#00d2ff';
       ctx.beginPath();
-      ctx.arc(titanX, titanY, 7, 0, Math.PI * 2);
+      ctx.arc(titanX, titanY, 12, 0, Math.PI * 2);
       ctx.fill();
     }
 
