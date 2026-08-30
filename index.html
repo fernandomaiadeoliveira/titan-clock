@@ -10,7 +10,8 @@
     header { text-align: center; margin-top: 20px; }
     h1 { font-size: 1.2rem; margin: 0; color: #e2ab54; }
     #status { font-size: 0.8rem; color: #888; margin-top: 4px; }
-    canvas { width: 90vw; height: 90vw; max-width: 400px; max-height: 400px; }
+    .canvas-container { width: 90vw; height: 90vw; max-width: 400px; max-height: 400px; display: flex; align-items: center; justify-content: center; }
+    canvas { width: 100%; height: 100%; aspect-ratio: 1 / 1; display: block; }
     footer { margin-bottom: 25px; text-align: center; font-size: 0.85rem; line-height: 1.5; color: #ccc; }
     .data-line { margin: 2px 0; }
     button { background: #333; color: #fff; border: 1px solid #555; padding: 6px 12px; border-radius: 6px; margin-top: 8px; font-size: 0.8rem; }
@@ -20,10 +21,12 @@
 
   <header>
     <h1>Saturn-Titan Ephemeris</h1>
-    <div id="status">Analytical Orbital Computation (v2.1)</div>
+    <div id="status">Analytical Orbital Computation (v2.2)</div>
   </header>
 
-  <canvas id="orbitCanvas" width="800" height="800"></canvas>
+  <div class="canvas-container">
+    <canvas id="orbitCanvas" width="800" height="800"></canvas>
+  </div>
 
   <footer>
     <div class="data-line" id="distance">Distance: Calculating...</div>
@@ -35,7 +38,6 @@
   <script>
     const canvas = document.getElementById('orbitCanvas');
     const ctx = canvas.getContext('2d');
-    const center = { x: 400, y: 400 };
 
     const TITAN_A = 1221870; // Semi-major axis (km)
     const TITAN_ECC = 0.0288;
@@ -93,22 +95,24 @@
     }
 
     function drawClock(titan, lsDeg) {
+      // Dynamic center definition to prevent offset rendering
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const scale = 300 / 1500000;
-
-      // Convert degrees to radians explicitly
       const lsRad = lsDeg * (Math.PI / 180);
 
       // Sun Direction Ray (y inverted for Canvas coordinates)
-      const sunX = center.x + Math.cos(lsRad) * 380;
-      const sunY = center.y - Math.sin(lsRad) * 380;
+      const sunX = centerX + Math.cos(lsRad) * 380;
+      const sunY = centerY - Math.sin(lsRad) * 380;
 
       ctx.strokeStyle = 'rgba(255, 223, 0, 0.6)';
       ctx.lineWidth = 2;
       ctx.setLineDash([8, 8]);
       ctx.beginPath();
-      ctx.moveTo(center.x, center.y);
+      ctx.moveTo(centerX, centerY);
       ctx.lineTo(sunX, sunY);
       ctx.stroke();
       ctx.setLineDash([]);
@@ -117,18 +121,18 @@
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(center.x, center.y, TITAN_A * scale, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, TITAN_A * scale, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Saturn Center
+      // Saturn Center (forced to exact canvas center)
       ctx.fillStyle = '#e2ab54';
       ctx.beginPath();
-      ctx.arc(center.x, center.y, 20, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
       ctx.fill();
 
       // Titan Position
-      const titanX = center.x + (titan.x * scale);
-      const titanY = center.y - (titan.y * scale);
+      const titanX = centerX + (titan.x * scale);
+      const titanY = centerY - (titan.y * scale);
 
       ctx.fillStyle = '#00d2ff';
       ctx.beginPath();
